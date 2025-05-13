@@ -478,7 +478,7 @@ if __name__ == "__main__":
         '-n', '--num-answers', type=int, default=1, help="输出结果数量"
     )
     _PARSER.add_argument(
-        '-s', '--sock5', type=str, default='13659', help="本地 sock5 代理端口"
+        '-s', '--sock5', type=str, default='50171', help="本地 sock5 代理端口"
     )
     _PARSER.add_argument(
         '-d', '--debugger', type=str, default=None, help="本地 chrome debugger 端口"
@@ -503,12 +503,16 @@ if __name__ == "__main__":
 
     # set proxy
     _OPTIONS = uc.ChromeOptions()
+    # 禁用代理设置，因为代理连接失败
     _OPTIONS.add_argument('--proxy-server=socks5://127.0.0.1:' + _ARGS.sock5)
-    # _OPTIONS.add_argument('--no-sandbox')
+    _OPTIONS.add_argument('--no-sandbox')
     if _ARGS.debugger is not None:
         _OPTIONS.add_experimental_option('debuggerAddress', '127.0.0.1:' + _ARGS.debugger)
 
-    _SERVICE = ChromeService(ChromeDriverManager(path=_ARGS.driver_dir).install())
+    # 修复 ChromeDriverManager 参数问题，最新版本不支持 path 参数
+    if _ARGS.driver_dir:
+        os.environ["WDM_CACHE_PATH"] = _ARGS.driver_dir  # 设置缓存路径环境变量
+    _SERVICE = ChromeService(ChromeDriverManager().install())
 
     driver: uc.Chrome = None
     # init chrome driver
@@ -528,7 +532,14 @@ if __name__ == "__main__":
         print(f'rm -rf {_ARGS.user_data_dir}')
         exit()
 
-    for s in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+    # Windows 不支持 SIGHUP 信号，需要进行平台检测
+    import platform
+    if platform.system() == 'Windows':
+        signals = (signal.SIGTERM, signal.SIGINT)
+    else:
+        signals = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+    
+    for s in signals:
         signal.signal(s, close_driver) # 定义捕获信号和关闭时的处理函数
 
     printf("pid", os.getpid(), ', args:', json.dumps(vars(_ARGS), indent=2))
