@@ -167,12 +167,46 @@ def ppl_batched(
 
 def read_data(path) -> Dataset:
     def add_len(x):
-        x['len'] = len(x['answer'])
+        # 检查数据集中的列名，适配不同的列名格式
+        if 'answer' in x:
+            x['len'] = len(x['answer'])
+        elif 'human_answers' in x and 'chatgpt_answers' in x:
+            # 如果有human_answers和chatgpt_answers列，使用第一个答案的长度
+            human_ans = x['human_answers']
+            chatgpt_ans = x['chatgpt_answers']
+            
+            # 处理可能的字符串格式（如果是字符串形式的列表）
+            if isinstance(human_ans, str) and human_ans.startswith('[') and human_ans.endswith(']'):
+                try:
+                    import ast
+                    human_ans = ast.literal_eval(human_ans)[0]  # 取第一个答案
+                except:
+                    human_ans = human_ans
+            
+            if isinstance(chatgpt_ans, str) and chatgpt_ans.startswith('[') and chatgpt_ans.endswith(']'):
+                try:
+                    import ast
+                    chatgpt_ans = ast.literal_eval(chatgpt_ans)[0]  # 取第一个答案
+                except:
+                    chatgpt_ans = chatgpt_ans
+                    
+            # 使用人类答案的长度
+            x['len'] = len(str(human_ans))
+            # 添加answer列，方便后续处理
+            x['answer'] = str(human_ans)
+        else:
+            # 如果没有找到预期的列，使用一个默认值
+            print(f"警告：数据集中没有找到'answer'或'human_answers'列。可用的列：{list(x.keys())}")
+            x['len'] = 0
+            x['answer'] = ""
         return x
 
     dataset: Dataset = Dataset.from_csv(path)  # type: ignore
     # dataset = dataset.filter(lambda x, i: i < 100, with_indices=True)
 
+    # 打印数据集的列名，帮助调试
+    print(f"数据集列名: {dataset.column_names}")
+    
     # sort to reduce padding computation
     dataset = dataset.map(add_len)
     sorted_dataset = dataset.sort('len', reverse=True)
@@ -331,7 +365,7 @@ if __name__ == '__main__':
     _PARSER = argparse.ArgumentParser('detector')
     _PARSER.add_argument(
         '-i', '--input', type=str, help='input file path',
-        default='text/zh'
+        default='text/en'
     )
     _PARSER.add_argument(
         '-t', '--test', type=int, default=1, help='test no. (0: ppl, 1: rank bucket)'
@@ -343,11 +377,9 @@ if __name__ == '__main__':
 
     _ARGS = _PARSER.parse_args()
     if os.path.basename(_ARGS.input)[-2:] == 'en':
-        from nltk.data import load as nltk_load
-
-        # https://huggingface.co/Hello-SimpleAI/chatgpt-detector-ling/resolve/main/english.pickle
-        NLTK = nltk_load("data/english.pickle")
-        sent_cut = NLTK.tokenize
+        # 使用nltk的sent_tokenize代替加载pickle文件
+        from nltk.tokenize import sent_tokenize
+        sent_cut = sent_tokenize
         if _ARGS.gpt is None:
             _ARGS.gpt = 'gpt2'
     else:

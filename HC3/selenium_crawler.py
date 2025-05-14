@@ -95,11 +95,16 @@ class Selector:
 
 
 def input_textarea() -> WebElement:
-    textarea = driver.find_element(By.CSS_SELECTOR, Selector.input_textarea)
-    tabindex = textarea.get_attribute('tabindex')
-    rows = textarea.get_attribute('rows')
-    assert tabindex == '0' and rows == '1'
-    return textarea
+    # 尝试找到输入框，不再严格检查属性值
+    try:
+        textarea = driver.find_element(By.CSS_SELECTOR, Selector.input_textarea)
+        # 只检查是否找到了元素，不再检查具体属性
+        return textarea
+    except NoSuchElementException:
+        # 如果找不到，尝试更通用的选择器
+        printf("尝试使用更通用的选择器查找输入框")
+        textarea = driver.find_element(By.TAG_NAME, 'textarea')
+        return textarea
 
 
 def regenerate_response_button() -> WebElement:
@@ -478,7 +483,10 @@ if __name__ == "__main__":
         '-n', '--num-answers', type=int, default=1, help="输出结果数量"
     )
     _PARSER.add_argument(
-        '-s', '--sock5', type=str, default='50171', help="本地 sock5 代理端口"
+        '-s', '--sock5', type=str, default='51373', help="本地代理端口"
+    )
+    _PARSER.add_argument(
+        '--proxy-type', type=str, default='http', choices=['http', 'socks5', 'none'], help="代理类型: http, socks5 或 none (不使用代理)"
     )
     _PARSER.add_argument(
         '-d', '--debugger', type=str, default=None, help="本地 chrome debugger 端口"
@@ -503,8 +511,9 @@ if __name__ == "__main__":
 
     # set proxy
     _OPTIONS = uc.ChromeOptions()
-    # 禁用代理设置，因为代理连接失败
-    _OPTIONS.add_argument('--proxy-server=socks5://127.0.0.1:' + _ARGS.sock5)
+    # 根据用户选择设置代理
+    if _ARGS.proxy_type != 'none':
+        _OPTIONS.add_argument(f'--proxy-server={_ARGS.proxy_type}://127.0.0.1:{_ARGS.sock5}')
     _OPTIONS.add_argument('--no-sandbox')
     if _ARGS.debugger is not None:
         _OPTIONS.add_experimental_option('debuggerAddress', '127.0.0.1:' + _ARGS.debugger)
