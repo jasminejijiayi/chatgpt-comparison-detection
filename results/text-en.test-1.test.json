@@ -1,0 +1,3 @@
+{"question":"What is artificial intelligence?","answer":"Artificial intelligence is a branch of computer science that aims to create systems capable of simulating human intelligence.","source":"human","len":125,"x":[17,1,3,0]}
+{"question":"What is machine learning?","answer":"Machine learning is a subset of artificial intelligence that focuses on developing algorithms that can learn from data.","source":"human","len":119,"x":[15,2,1,1]}
+{"question":"What is deep learning?","answer":"Deep learning is a branch of machine learning that uses multi-layer neural networks to analyze various factors.","source":"chatgpt","len":111,"x":[14,4,1,1]}

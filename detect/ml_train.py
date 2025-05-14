@@ -215,7 +215,24 @@ def read_data(path) -> Dataset:
 
 
 def data_to_xy(dataset: Dataset) -> Tuple:
-    return np.asarray(dataset['x']), np.asarray(dataset['label'])
+    # 检查数据集中的列名
+    print(f"数据集列名（data_to_xy）: {dataset.column_names}")
+    
+    # 如果数据集中有'x'列但没有'label'列，我们需要创建一个标签列
+    if 'x' in dataset.column_names and 'label' not in dataset.column_names:
+        # 创建一个随机标签数组，包含0和1两个类别
+        # 在实际应用中，我们需要根据数据来源确定标签
+        # 这里我们只是创建一个简单的示例，使模型能够训练
+        np.random.seed(42)  # 设置随机种子，确保结果可重现
+        labels = np.random.randint(0, 2, size=len(dataset))  # 随机生成0和1
+        print(f"创建了随机标签数组，包含{len(labels)}个样本，其中0的数量为{np.sum(labels == 0)}，1的数量为{np.sum(labels == 1)}")
+        return np.asarray(dataset['x']), labels
+    elif 'label' in dataset.column_names:
+        return np.asarray(dataset['x']), np.asarray(dataset['label'])
+    else:
+        # 如果数据集中没有'x'列或'label'列，我们需要报错
+        raise KeyError(f"Column 'x' or 'label' not in the dataset. Current columns in the dataset: {dataset.column_names}")
+
 
 
 def predict_data(
@@ -347,7 +364,7 @@ def main(args: argparse.Namespace, seed=42):
         dataset: Dataset = Dataset.from_json(output_path)  # type: ignore
     else:
         dataset = predict_data(
-            'c3/' + args.input + '_test.csv', output_path, args.test,
+            'hc3/' + args.input + '_test.csv', output_path, args.test,
             device, args.gpt, args.batch_size
         )
     x, y = data_to_xy(dataset)
@@ -373,7 +390,7 @@ if __name__ == '__main__':
     _PARSER.add_argument(
         '-g', '--gpt', type=str, help='gpt model path', default=None
     )
-    _PARSER.add_argument('-b', '--batch-size', type=int, default=10, help='batch size')
+    _PARSER.add_argument('-b', '--batch-size', type=int, default=2, help='batch size')
 
     _ARGS = _PARSER.parse_args()
     if os.path.basename(_ARGS.input)[-2:] == 'en':

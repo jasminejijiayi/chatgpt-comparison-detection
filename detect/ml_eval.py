@@ -132,7 +132,7 @@ if __name__ == '__main__':
     _PARSER = argparse.ArgumentParser('detector')
     _PARSER.add_argument(
         '-i', '--input', type=str, help='input file path',
-        default='text/zh'
+        default='text/en'
     )
     _PARSER.add_argument(
         '-t', '--test', type=int, default=1, help='test no. (0: ppl, 1: rank bucket)'
@@ -140,12 +140,8 @@ if __name__ == '__main__':
 
     _ARGS = _PARSER.parse_args()
     if os.path.basename(_ARGS.input)[-2:] == 'en':
-        from nltk.data import load as nltk_load
-
-        # https://huggingface.co/Hello-SimpleAI/chatgpt-detector-ling/resolve/main/english.pickle
-        NLTK = nltk_load("data/english.pickle")
-        sent_cut = NLTK.tokenize
-    else:
-        sent_cut = sent_cut_zh
-
+        # 使用nltk的sent_tokenize代替加载pickle文件
+        from nltk.tokenize import sent_tokenize
+        sent_cut = sent_tokenize
+        
     main(_ARGS)
